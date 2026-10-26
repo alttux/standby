@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
+    <key>CFBundleExecutable</key><string>StandByCompanion</string>
+    <key>CFBundleIdentifier</key><string>dev.standby.companion</string>
+    <key>CFBundleName</key><string>StandBy Companion</string>
+    <key>CFBundleDisplayName</key><string>StandBy Companion</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleShortVersionString</key><string>1.0</string>
+    <key>CFBundleVersion</key><string>1</string>
+    <key>LSMinimumSystemVersion</key><string>13.0</string>
+    <key>LSUIElement</key><true/>
+    <key>NSHighResolutionCapable</key><true/>
+    <key>NSMicrophoneUsageDescription</key><string>The microphone level drives the audio visualizer on the phone's call card.</string>
+    <key>NSAudioCaptureUsageDescription</key><string>The sound the Mac plays drives the audio visualizer on the phone's call card.</string>
+    <key>NSLocalNetworkUsageDescription</key><string>Wi-Fi debugging connects to the phone over your local network.</string>
+    <key>NSAppleEventsUsageDescription</key><string>StandBy Companion reads the current track from Music or Spotify and controls playback from the phone.</string>
+</dict>
+</plist>

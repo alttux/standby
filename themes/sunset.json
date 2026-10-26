@@ -1,0 +1,40 @@
+{
+  "id": "sunset",
+  "name": "Sunset",
+  "light": {
+    "background": "#FFF4EC",
+    "surface": "#FFFFFF",
+    "surface2": "#FBE3D3",
+    "separator": "#F0CDB8",
+    "text": "#3B1F2B",
+    "text2": "#8A5A6A",
+    "text3": "#C49AA6",
+    "accent": "#F25C54",
+    "red": "#E63946",
+    "orange": "#F4845F",
+    "yellow": "#F7B267",
+    "green": "#6A994E",
+    "teal": "#2A9D8F",
+    "blue": "#457B9D",
+    "purple": "#8E5572",
+    "pink": "#F27059"
+  },
+  "dark": {
+    "background": "#1B1020",
+    "surface": "#2A1A30",
+    "surface2": "#3A2442",
+    "separator": "#4C3055",
+    "text": "#FFE8D6",
+    "text2": "#D4A5A5",
+    "text3": "#8C6A7A",
+    "accent": "#FF7B54",
+    "red": "#FF5D73",
+    "orange": "#FF9F68",
+    "yellow": "#FFD56B",
+    "green": "#9BD770",
+    "teal": "#5EC2B7",
+    "blue": "#7AA5D2",
+    "purple": "#B388EB",
+    "pink": "#FF8FAB"
+  }
+}
