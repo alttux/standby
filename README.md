@@ -10,6 +10,7 @@
 |---|---|
 | ![Погода](docs/screenshots/card-weather.jpg) | ![Нагрузка Mac](docs/screenshots/card-stats.jpg) |
 | ![Плеер](docs/screenshots/card-player.jpg) | ![Созвоны](docs/screenshots/card-call.jpg) |
+| ![Touch Bar](docs/touchbar/card-finder.jpg) | ![Touch Bar в Music](docs/touchbar/card-music.jpg) |
 
 ## Содержание
 - [Что внутри](#что-внутри)
@@ -40,10 +41,11 @@ standby/
 │   │   └── data/            настройки, погода, HTTP, сервер для компаньона, логи
 │   └── keystore/            ключ подписи (личное использование)
 ├── companion/               компаньон: Swift (AppKit + SwiftUI), Swift Package, macOS 13+
-│   ├── Sources/StandByCompanion/
+│   ├── Sources/StandByCompanion/  (TouchBar.swift — эмулятор Touch Bar)
 │   └── build.sh             сборка .app и zip
 ├── themes/sunset.json       пример своей темы
 ├── docs/screenshots/        скриншоты для этого README
+├── docs/touchbar/           исследование и адаптация эмулятора Touch Bar
 ├── dist/
 │   ├── StandBy.apk                     готовый лаунчер (release, ~450 КБ)
 │   └── StandBy-Companion-macOS.zip     готовый компаньон (Apple Silicon)
@@ -75,6 +77,7 @@ standby/
 5. При первом использовании macOS спросит разрешения:
    - **Автоматизация → Music / Spotify** — для плеера;
    - **Микрофон** — для визуализатора, пока на телефоне открыта карточка «Созвоны»;
+   - **Универсальный доступ** — для нажатий на карточке Touch Bar;
    - **Локальная сеть** — для подключения по Wi-Fi.
 
 ## Лаунчер: карточки
@@ -145,6 +148,21 @@ standby/
 
 ![Созвоны](docs/screenshots/card-call.jpg)
 
+### Touch Bar \*
+Настоящий Touch Bar macOS: кнопки активного приложения и Control Strip, отрисованные самой системой.
+Это тот же механизм, что у симулятора Touch Bar в Xcode и у проекта
+[touch-bar-simulator](https://github.com/sindresorhus/touch-bar-simulator); работает и на Mac без Touch Bar.
+Полоса 36:1 раскладывается в 2–4 строки по промежуткам между группами кнопок: группа никогда не разрывается,
+первая строка прижата влево (`esc`), последняя вправо (Control Strip). Тап, перетаскивание слайдеров
+и удержание передаются на Mac, вертикальный свайп листает карточки.
+Для нажатий дайте StandBy Companion «Универсальный доступ» на Mac.
+Исследование и адаптация — в [docs/touchbar/RESEARCH.md](docs/touchbar/RESEARCH.md) и
+[docs/touchbar/ADAPTATION.md](docs/touchbar/ADAPTATION.md).
+
+| Finder | Firefox |
+|---|---|
+| ![Finder](docs/touchbar/card-finder.jpg) | ![Firefox](docs/touchbar/card-firefox.jpg) |
+
 \* — данные приходят от компаньона на Mac. Без него карточка показывает подсказку «Mac не подключён».
 
 ## Лаунчер: приложения и настройки
@@ -180,6 +198,7 @@ standby/
 | Нагрузка Mac | длина истории графиков |
 | Плеер | фон по цвету обложки |
 | Созвоны | визуализатор вкл/выкл, стиль «столбики» или «волна» |
+| Touch Bar | число строк: 2, 3 или 4 |
 | Экран и питание | не выключать экран, удерживать экран и в других приложениях, яркость, сдвиг пикселей, скрытие системных панелей |
 | Ночной режим | выкл / по расписанию / по датчику освещённости, снижение яркости |
 | Компаньон для Mac | состояние, TCP-порт, перезапуск сервера, журнал лаунчера |
@@ -347,6 +366,7 @@ adb connect 192.168.1.150:5555   # IP телефона: adb shell ip addr show w
 | `artwork` | `id`, `data` (JPEG в base64) |
 | `call` | `active`, `app`, `since` (мс), `micMuted`, `outputMuted`, `input`, `output` |
 | `viz` | `bands[24]` (0…1), 20 раз в секунду, только по подписке |
+| `touchbar` | `data` (PNG в base64), `w`, `h` (px), `pw`, `ph` (pt), `app`, `input`; только по подписке, при изменениях, до 15 кадров/с |
 | `theme` | `theme` (объект темы), `file` |
 | `http` | ответ на прокси-запрос: `id`, `status`, `body` |
 | `ping` | `id` → телефон отвечает `pong` с тем же `id` |
@@ -355,7 +375,8 @@ adb connect 192.168.1.150:5555   # IP телефона: adb shell ip addr show w
 |---|---|
 | `hello` | `app`, `version`, `device`, `android` |
 | `cmd` | `action`: `media.playpause`, `media.next`, `media.prev`, `media.seek` (с), `volume.set` (0…1), `call.mic` (bool), `call.output` (bool); `value` |
-| `subscribe` | `viz`: true/false — открыта ли карточка «Созвоны» |
+| `subscribe` | `viz` и/или `touchbar`: true/false — открыта ли соответствующая карточка; ключи независимы |
+| `touchbar.touch` | `phase` (`down`/`move`/`up`), `x`, `y` — точки Touch Bar, начало слева внизу |
 | `http` | `id`, `url` — прокси-запрос погоды |
 | `ack` | `what`, `ok`, `file`/`error` — подтверждение установки темы |
 
@@ -392,6 +413,7 @@ cd companion
 | «No Android device» | проверьте кабель, «Отладку по USB» и запрос «Разрешить отладку» на телефоне |
 | «launcher not responding» | откройте лаунчер (меню → Open StandBy on Phone); порт в настройках лаунчера и компаньона должен совпадать |
 | Плеер «Ничего не играет» при играющей музыке | разрешите компаньону «Автоматизацию» для Music или Spotify (Конфиденциальность и безопасность → Автоматизация) |
+| Touch Bar: нажатия не работают | включите StandBy Companion в «Универсальном доступе»; после пересборки компаньона выключите и включите снова |
 | Визуализатор не двигается | разрешите микрофон; проверьте, что микрофон не выключен кнопкой на карточке |
 | Wi-Fi: «No route to host» | разрешите компаньону «Локальную сеть»; компаньон сам перезапустит adb-сервер; телефон и Mac должны быть в одной сети |
 | Погода «недоступна» | без интернета на телефоне погода идёт через компаньон — подключите его; «Обновить сейчас» в Настройках → Погода |
@@ -411,6 +433,7 @@ cd companion
 - Кнопки «Выкл. микрофон / звук» действуют на устройства по умолчанию, то есть на всю систему. Если у микрофона
   нет аппаратного mute, громкость ставится в 0 и потом восстанавливается.
 - Готовый компаньон собран только для Apple Silicon.
+- **Touch Bar** работает через приватный API macOS (проверено на 15.8.1); в новых версиях он может исчезнуть.
 - Задержка по Wi-Fi на тестовом телефоне — в среднем 60–70 мс с пиками до 0,5 с (2,4 ГГц): для часов и графиков
   этого достаточно, по USB — 4–5 мс.
 

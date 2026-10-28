@@ -47,6 +47,8 @@ open "build/StandBy Companion.app" --args --settings --logs --snapshot <dir>   #
   название в `SettingsPane.cardNames` → раздел настроек (`page(id)`, ключ раздела = ключу карточки,
   чтобы работало долгое нажатие).
 - Анимации и тики только пока `isActiveCard == true`; частота кадров ограничена (`postInvalidateDelayed`).
+- Раскладка Touch Bar (`TouchBarCard.splitIntoRows`) режет только по промежуткам ≥ 12 px (между группами кнопок);
+  пороги взяты из реальных кадров, см. `docs/touchbar/ADAPTATION.md`.
 - Касания внутри карточек — через `TapDetector`, чтобы не ломать свайпы `CardPager`/`Navigator`.
   Контрол, который тянут по горизонтали, вызывает `parent.requestDisallowInterceptTouchEvent(true)` на `ACTION_DOWN`.
 - Не называйте объекты `Companion` (конфликт с `companion object` в Kotlin) — объект подключения называется `Mac`.
@@ -64,6 +66,11 @@ open "build/StandBy Companion.app" --args --settings --logs --snapshot <dir>   #
   в лог (`MediaController.run`), не глушите их.
 - Логи: `Log.i`/`Log.w` — окно Logs, stdout и `~/Library/Logs/StandByCompanion.log`.
 - Новые разрешения macOS = ключ `NS…UsageDescription` в `companion/Resources/Info.plist`.
+- Touch Bar (`TouchBar.swift`) — приватные DFRFoundation и SkyLight через `dlsym`, плюс `CGDisplayStreamStart/Stop`
+  через `dlsym` (в SDK macOS 15 они недоступны). Всегда возвращайте `DFRSetStatus` к исходному значению.
+  Нажатия работают только с «Универсальным доступом», а у ad-hoc-сборки он сбрасывается после каждой пересборки.
+  Исследование — в `docs/touchbar/RESEARCH.md`, проверочная утилита — `docs/touchbar/probe/main.swift`.
+- Подписки в `subscribe` независимы (`viz`, `touchbar`): меняйте только ключи, которые пришли в сообщении.
 
 **Текущие решения пользователя — не менять без запроса**
 - Визуализатор созвонов берёт **только микрофон** (`Visualizer.update`); `SystemAudioSource` оставлен, но не используется.

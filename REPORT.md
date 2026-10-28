@@ -110,3 +110,10 @@ WifiLock для стабильного Wi-Fi.
 
 ## Как пользоваться результатом
 Установка и использование — в [README.md](README.md), правила доработки — в [AGENTS.md](AGENTS.md).
+
+## Дополнение (28 октября): эмулятор Touch Bar
+Изучен [touch-bar-simulator](https://github.com/sindresorhus/touch-bar-simulator): его механизм на macOS 15.8.1 работает,
+сломана только сборка на новом SDK. Механизм перенесён в компаньон, в лаунчер добавлена карточка «Touch Bar»
+с раскладкой в несколько строк. Отчёты: [docs/touchbar/RESEARCH.md](docs/touchbar/RESEARCH.md) и
+[docs/touchbar/ADAPTATION.md](docs/touchbar/ADAPTATION.md).
+
