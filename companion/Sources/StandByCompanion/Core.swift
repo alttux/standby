@@ -69,13 +69,14 @@ final class Settings: ObservableObject {
     @Published var sendMedia: Bool { didSet { d.set(sendMedia, forKey: "sendMedia") } }
     @Published var sendCall: Bool { didSet { d.set(sendCall, forKey: "sendCall") } }
     @Published var visualizer: Bool { didSet { d.set(visualizer, forKey: "visualizer") } }
+    @Published var touchBar: Bool { didSet { d.set(touchBar, forKey: "touchBar") } }
     /// Prefer the Wi-Fi transport (`adb connect wifiAddress`) over USB.
     @Published var wifiEnabled: Bool { didSet { d.set(wifiEnabled, forKey: "wifiEnabled") } }
     /// "ip:port" of the phone's adb over TCP.
     @Published var wifiAddress: String { didSet { d.set(wifiAddress, forKey: "wifiAddress") } }
 
     private init() {
-        d.register(defaults: ["port": 47800, "sendStats": true, "sendMedia": true, "sendCall": true, "visualizer": true])
+        d.register(defaults: ["port": 47800, "sendStats": true, "sendMedia": true, "sendCall": true, "visualizer": true, "touchBar": true])
         adbPath = d.string(forKey: "adbPath") ?? ""
         serial = d.string(forKey: "serial") ?? ""
         port = d.integer(forKey: "port")
@@ -83,6 +84,7 @@ final class Settings: ObservableObject {
         sendMedia = d.bool(forKey: "sendMedia")
         sendCall = d.bool(forKey: "sendCall")
         visualizer = d.bool(forKey: "visualizer")
+        touchBar = d.bool(forKey: "touchBar")
         wifiEnabled = d.bool(forKey: "wifiEnabled")
         wifiAddress = d.string(forKey: "wifiAddress") ?? ""
     }

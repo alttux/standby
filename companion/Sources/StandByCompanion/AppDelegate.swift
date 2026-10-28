@@ -40,6 +40,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.button?.toolTip = "StandBy Companion — \(conn.status.text)"
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        hub.shutdown()
+    }
+
     // MARK: menu
 
     func menuNeedsUpdate(_ menu: NSMenu) {

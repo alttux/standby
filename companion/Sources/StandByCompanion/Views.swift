@@ -76,6 +76,7 @@ struct SettingsView: View {
                 Toggle("Now playing (Music, Spotify)", isOn: $s.sendMedia)
                 Toggle("Calls (microphone and sound)", isOn: $s.sendCall)
                 Toggle("Microphone visualizer", isOn: $s.visualizer)
+                Toggle("Touch Bar emulator (needs Accessibility for taps)", isOn: $s.touchBar)
             }
             Section("Phone") {
                 HStack {

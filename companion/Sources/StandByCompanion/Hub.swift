@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 
 /// Wires collectors to the connection: periodic updates out, commands in.
 final class Hub {
@@ -11,6 +11,8 @@ final class Hub {
     private var timer: Timer?
     private var vizTimer: Timer?
     private var wantViz = false
+    private let touchBar = TouchBarEmulator()
+    private var wantTouchBar = false
     /// The mic is added only during a call: opening it earlier would switch Bluetooth headsets to the low-quality headset profile.
     private var callActive = false
     private let statsQ = DispatchQueue(label: "stats")
@@ -26,7 +28,19 @@ final class Hub {
         media.onArtwork = { [weak self] id, b64 in
             self?.conn.send(["type": "artwork", "id": id, "data": b64])
         }
+        touchBar.onFrame = { [weak self] png, w, h, size in
+            guard let self else { return }
+            let app = DispatchQueue.main.sync { NSWorkspace.shared.frontmostApplication?.localizedName ?? "" }
+            self.conn.send([
+                "type": "touchbar", "data": png.base64EncodedString(), "w": w, "h": h,
+                "pw": Double(size.width), "ph": Double(size.height), "app": app,
+                "input": self.touchBar.inputAllowed,
+            ])
+        }
     }
+
+    /// Restores the system state we changed (the virtual Touch Bar).
+    func shutdown() { touchBar.stop() }
 
     func start() {
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.tick() }
@@ -35,8 +49,10 @@ final class Hub {
     private func tick() {
         guard conn.status.isConnected else {
             updateViz()
+            updateTouchBar()
             return
         }
+        updateTouchBar()
         if settings.sendStats {
             statsQ.async {
                 let s = self.stats.sample()
@@ -77,6 +93,15 @@ final class Hub {
         }
     }
 
+    private func updateTouchBar() {
+        let on = wantTouchBar && settings.touchBar && conn.status.isConnected
+        if on && !touchBar.running {
+            touchBar.start()
+        } else if !on && touchBar.running {
+            touchBar.stop()
+        }
+    }
+
     private func handle(_ o: [String: Any]) {
         switch o["type"] as? String {
         case "cmd":
@@ -90,8 +115,20 @@ final class Hub {
                 statsQ.asyncAfter(deadline: .now() + 0.2) { self.conn.send(self.calls.status()) }
             }
         case "subscribe":
-            wantViz = o["viz"] as? Bool ?? false
-            updateViz()
+            // each key is optional: only the subscriptions present in the message change
+            if let v = o["viz"] as? Bool {
+                wantViz = v
+                updateViz()
+            }
+            if let t = o["touchbar"] as? Bool {
+                wantTouchBar = t
+                updateTouchBar()
+                if t { touchBar.resend() }
+            }
+        case "touchbar.touch":
+            guard let ph = (o["phase"] as? String).flatMap(TouchBarEmulator.Phase.init(rawValue:)),
+                  let x = (o["x"] as? NSNumber)?.doubleValue, let y = (o["y"] as? NSNumber)?.doubleValue else { return }
+            touchBar.touch(ph, at: CGPoint(x: x, y: y))
         case "http":
             proxy(o)
         case "ack":
