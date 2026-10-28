@@ -28,6 +28,7 @@ import dev.standby.cards.ClockCard
 import dev.standby.cards.HomeCard
 import dev.standby.cards.PlayerCard
 import dev.standby.cards.StatsCard
+import dev.standby.cards.TouchBarCard
 import dev.standby.cards.WeatherCard
 import dev.standby.data.Logx
 import dev.standby.data.Mac
@@ -111,6 +112,7 @@ class MainActivity : Activity(), SettingsPane.Host, Mac.Listener, SensorEventLis
         "stats" -> StatsCard(this)
         "player" -> PlayerCard(this)
         "call" -> CallCard(this)
+        "touchbar" -> TouchBarCard(this)
         else -> HomeCard(this)
     }
 

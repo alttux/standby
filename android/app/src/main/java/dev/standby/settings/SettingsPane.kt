@@ -76,6 +76,7 @@ class SettingsPane(ctx: Context, private val host: Host) : LinearLayout(ctx), Ma
             Section("stats", L("System Stats", "Нагрузка Mac"), R.drawable.ic_bar_chart, pal.green),
             Section("player", L("Player", "Плеер"), R.drawable.ic_music, pal.pink),
             Section("call", L("Calls", "Созвоны"), R.drawable.ic_phone, pal.green),
+            Section("touchbar", "Touch Bar", R.drawable.ic_touchbar, 0xFF3A3A3C.toInt()),
         ),
         listOf(
             Section("display", L("Display & Power", "Экран и питание"), R.drawable.ic_sun, pal.blue),
@@ -421,6 +422,15 @@ class SettingsPane(ctx: Context, private val host: Host) : LinearLayout(ctx), Ma
                 "Поддерживаются Apple Music и Spotify. Пауза, перемотка, переключение треков и системная громкость управляются на Mac."))
         }
 
+        "touchbar" -> Page(title(id)) {
+            group(L("Rows", "Строки"), L("The Touch Bar is split between buttons into several rows to fit the screen.",
+                "Touch Bar делится между кнопками на несколько строк, чтобы уместиться на экране.")) {
+                segmented(null, listOf("2" to "2", "3" to "3", "4" to "4"), Prefs.touchBarRows.toString()) { Prefs.touchBarRows = it.toInt() }
+            }
+            companionNote(this, L("This is the Touch Bar macOS itself renders (the frontmost app's buttons and the Control Strip), the same private API the Xcode Touch Bar simulator uses. Taps need Accessibility access for StandBy Companion on the Mac.",
+                "Это Touch Bar, который рисует сама macOS (кнопки активного приложения и Control Strip), через тот же приватный API, что и симулятор Touch Bar из Xcode. Для нажатий дайте StandBy Companion «Универсальный доступ» на Mac."))
+        }
+
         "call" -> Page(title(id)) {
             group {
                 switch(L("Audio visualizer", "Аудиовизуализатор"), Prefs.callViz) { Prefs.callViz = it }
@@ -552,7 +562,7 @@ class SettingsPane(ctx: Context, private val host: Host) : LinearLayout(ctx), Ma
     fun cardNames() = mapOf(
         "home" to L("Clock + calendar", "Часы + календарь"), "weather" to L("Weather", "Погода"),
         "calendar" to L("Calendar", "Календарь"), "clock" to L("Clock", "Часы"), "stats" to L("System stats", "Нагрузка Mac"),
-        "player" to L("Player", "Плеер"), "call" to L("Calls", "Созвоны"),
+        "player" to L("Player", "Плеер"), "call" to L("Calls", "Созвоны"), "touchbar" to "Touch Bar",
     )
 
     private fun hour(h: Int) = String.format(Locale.US, "%02d:00", h)

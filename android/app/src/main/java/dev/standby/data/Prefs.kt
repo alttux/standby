@@ -10,7 +10,7 @@ object Prefs {
     lateinit var sp: SharedPreferences
         private set
 
-    val CARD_KEYS = listOf("home", "weather", "calendar", "clock", "stats", "player", "call")
+    val CARD_KEYS = listOf("home", "weather", "calendar", "clock", "stats", "player", "call", "touchbar")
 
     private val listeners = CopyOnWriteArraySet<(String) -> Unit>()
     private val spListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -73,6 +73,7 @@ object Prefs {
     var playerTint by bool("player.tint", true)
     var callViz by bool("call.viz", true)
     var vizStyle by str("call.vizStyle", "bars")         // bars | wave
+    var touchBarRows by int("touchbar.rows", 3)          // 2 | 3 | 4
 
     // Display & power
     var keepScreenOn by bool("display.keepOn", true)

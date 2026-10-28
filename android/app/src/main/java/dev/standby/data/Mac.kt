@@ -64,6 +64,17 @@ class Media(
     }
 }
 
+/**
+ * One frame of the emulated Touch Bar: [width]×[height] px, [pw]×[ph] Touch Bar points.
+ * [empty] marks pixel columns that are pure background, used to split the bar into rows between buttons.
+ */
+class TouchBarFrame(
+    val bitmap: Bitmap, val pw: Float, val ph: Float, val app: String, val input: Boolean, val empty: BooleanArray,
+) {
+    val width get() = bitmap.width
+    val height get() = bitmap.height
+}
+
 class CallState(
     val active: Boolean, val app: String, val since: Long, var micMuted: Boolean, var outputMuted: Boolean,
     val inputName: String, val outputName: String,
@@ -100,6 +111,8 @@ object Mac {
         private set
     @Volatile var viz = FloatArray(0)
         private set
+    @Volatile var touchBar: TouchBarFrame? = null
+        private set
 
     interface Listener { fun onCompanion(topic: String) }
 
@@ -112,6 +125,7 @@ object Mac {
     private val pending = ConcurrentHashMap<Int, LinkedBlockingQueue<String>>()
     private val ids = AtomicInteger(1)
     @Volatile private var wantViz = false
+    @Volatile private var wantTouchBar = false
 
     fun listen(l: Listener) { listeners.add(l) }
     fun unlisten(l: Listener) { listeners.remove(l) }
@@ -155,6 +169,37 @@ object Mac {
         send(JSONObject().put("type", "subscribe").put("viz", on))
     }
 
+    fun subscribeTouchBar(on: Boolean) {
+        wantTouchBar = on
+        send(JSONObject().put("type", "subscribe").put("touchbar", on))
+    }
+
+    /** A touch on the emulated Touch Bar, in Touch Bar points with the origin at the bottom left. */
+    fun touchBarTouch(phase: String, x: Float, y: Float) {
+        send(JSONObject().put("type", "touchbar.touch").put("phase", phase).put("x", x.toDouble()).put("y", y.toDouble()))
+    }
+
+    private fun decodeTouchBar(o: JSONObject): TouchBarFrame? {
+        val bytes = try { Base64.decode(o.optString("data"), Base64.DEFAULT) } catch (e: Exception) { return null }
+        val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
+        // a column is "empty" when every sampled pixel is (near) black background
+        val w = bmp.width
+        val h = bmp.height
+        val empty = BooleanArray(w) { true }
+        val row = IntArray(w)
+        var y = 1
+        while (y < h - 1) {
+            bmp.getPixels(row, 0, w, 0, y, w, 1)
+            for (x in 0 until w) {
+                val c = row[x]
+                if (empty[x] && ((c shr 16 and 0xFF) + (c shr 8 and 0xFF) + (c and 0xFF)) > 60) empty[x] = false
+            }
+            y += 3
+        }
+        return TouchBarFrame(bmp, o.optDouble("pw", w / 2.0).toFloat(), o.optDouble("ph", h / 2.0).toFloat(),
+            o.optString("app"), o.optBoolean("input", true), empty)
+    }
+
     /** Proxies an HTTP GET through the Mac; blocking. */
     fun httpGet(url: String): String? {
         if (!connected) return null
@@ -181,8 +226,13 @@ object Mac {
                 }
                 emit("conn")
                 if (wantViz) subscribeViz(true)
+                if (wantTouchBar) subscribeTouchBar(true)
             }
             "ping" -> send(JSONObject().put("type", "pong").put("id", o.opt("id")))
+            "touchbar" -> decodeTouchBar(o)?.let {
+                touchBar = it
+                emit("touchbar")
+            }
             "stats" -> {
                 cpu.add(o.optDouble("cpu", 0.0).toFloat())
                 gpu.add(o.optDouble("gpu", 0.0).toFloat())
@@ -255,6 +305,7 @@ object Mac {
         connected = false
         media = null
         volume = -1f
+        touchBar = null
         call = null
         viz = FloatArray(0)
         Logx.i("Companion disconnected")
