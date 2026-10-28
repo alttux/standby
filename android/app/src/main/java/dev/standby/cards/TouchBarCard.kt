@@ -73,6 +73,7 @@ class TouchBarCard(ctx: Context) : Card(ctx) {
         private var downAt = 0L
         private var pressed = false
         private var lastMove = 0L
+        private var dragging = false
         private val hold = Runnable { if (touchRow != null && !pressed) press() }
 
         override fun onDraw(c: Canvas) {
@@ -258,7 +259,10 @@ class TouchBarCard(ctx: Context) : Card(ctx) {
         /** Touch Bar point (origin bottom-left, as DFRFoundationPostEventWithMouseActivity expects). */
         private fun toPoint(r: Row, x: Float, y: Float): Pair<Float, Float>? {
             val f = Mac.touchBar ?: return null
-            val px = (r.srcFrom + (x - r.content.left) / scale).coerceIn(r.srcFrom.toFloat(), r.srcTo - 1f)
+            // a tap stays inside its row; a drag continues past the row's ends along the whole bar,
+            // so a scrubber split over two rows (e.g. the share list) can be scrolled all the way
+            val raw = r.srcFrom + (x - r.content.left) / scale
+            val px = if (pressed && dragging) raw.coerceIn(0f, f.width - 1f) else raw.coerceIn(r.srcFrom.toFloat(), r.srcTo - 1f)
             val py = ((y - r.content.top) / scale).coerceIn(0f, f.height - 1f)
             return px * f.pw / f.width to f.ph - py * f.ph / f.height
         }
@@ -282,9 +286,15 @@ class TouchBarCard(ctx: Context) : Card(ctx) {
                 MotionEvent.ACTION_DOWN -> {
                     touchRow = rowAt(e.y)
                     pressed = false
+                    dragging = false
                     downX = e.x; downY = e.y; downAt = SystemClock.uptimeMillis()
-                    // a held finger (e.g. long-press in the Control Strip) is forwarded after a short delay
-                    if (touchRow != null) postDelayed(hold, 180)
+                    if (touchRow != null) {
+                        // own the gesture on a strip, so horizontal swipes scroll the Touch Bar instead of
+                        // switching launcher panes; vertical swipes are handed back to the card pager below
+                        parent?.requestDisallowInterceptTouchEvent(true)
+                        // a held finger (e.g. long-press in the Control Strip) is forwarded after a short delay
+                        postDelayed(hold, 180)
+                    }
                     return true
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -292,13 +302,17 @@ class TouchBarCard(ctx: Context) : Card(ctx) {
                     val dx = abs(e.x - downX)
                     val dy = abs(e.y - downY)
                     if (!pressed) {
-                        if (dy > slop && dy > dx) {           // a card swipe: let the pager have it
+                        if (dy > slop && dy > dx) {           // a card swipe: give the gesture back to the pager
                             removeCallbacks(hold)
                             touchRow = null
+                            parent?.requestDisallowInterceptTouchEvent(false)
                             return true
                         }
-                        if (dx > slop) press()                // slider drag
-                    }
+                        if (dx > slop) {                      // scrubber scroll or slider drag
+                            dragging = true
+                            press()
+                        }
+                    } else if (dx > slop) dragging = true
                     if (pressed && SystemClock.uptimeMillis() - lastMove > 30) {
                         lastMove = SystemClock.uptimeMillis()
                         send("move", e.x, e.y)
@@ -306,9 +320,14 @@ class TouchBarCard(ctx: Context) : Card(ctx) {
                 }
                 MotionEvent.ACTION_UP -> {
                     removeCallbacks(hold)
-                    if (touchRow != null) {
-                        if (!pressed) send("down", downX, downY)
-                        send("up", e.x, e.y)
+                    val r = touchRow
+                    if (r != null) {
+                        if (!pressed) {
+                            // a quick tap: the Touch Bar ignores a release that arrives together with the press
+                            send("down", downX, downY)
+                            val p = toPoint(r, e.x, e.y)
+                            if (p != null) postDelayed({ Mac.touchBarTouch("up", p.first, p.second) }, 60)
+                        } else send("up", e.x, e.y)
                     }
                     touchRow = null
                     pressed = false

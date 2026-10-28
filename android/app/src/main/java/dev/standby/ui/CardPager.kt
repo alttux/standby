@@ -168,6 +168,12 @@ class CardPager(ctx: Context) : FrameLayout(ctx) {
         }
     }
 
+    /** A child that takes over the gesture (Touch Bar, sliders) must not end up opening the card settings. */
+    override fun requestDisallowInterceptTouchEvent(disallow: Boolean) {
+        if (disallow) removeCallbacks(longPress)
+        super.requestDisallowInterceptTouchEvent(disallow)
+    }
+
     override fun onInterceptTouchEvent(e: MotionEvent): Boolean {
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> begin(e)
