@@ -113,6 +113,9 @@ object Mac {
         private set
     @Volatile var touchBar: TouchBarFrame? = null
         private set
+    /** Why the Mac is not streaming the Touch Bar, or empty. */
+    @Volatile var touchBarError = ""
+        private set
 
     interface Listener { fun onCompanion(topic: String) }
 
@@ -231,6 +234,12 @@ object Mac {
             "ping" -> send(JSONObject().put("type", "pong").put("id", o.opt("id")))
             "touchbar" -> decodeTouchBar(o)?.let {
                 touchBar = it
+                touchBarError = ""
+                emit("touchbar")
+            }
+            "touchbar.status" -> {
+                touchBarError = o.optString("error")
+                if (touchBarError.isNotEmpty()) Logx.w("Touch Bar on the Mac: $touchBarError")
                 emit("touchbar")
             }
             "stats" -> {
@@ -306,6 +315,7 @@ object Mac {
         media = null
         volume = -1f
         touchBar = null
+        touchBarError = ""
         call = null
         viz = FloatArray(0)
         Logx.i("Companion disconnected")

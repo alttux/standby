@@ -93,12 +93,21 @@ final class Hub {
         }
     }
 
+    private var sentTouchBarError: String?
+
     private func updateTouchBar() {
         let on = wantTouchBar && settings.touchBar && conn.status.isConnected
         if on && !touchBar.running {
             touchBar.start()
         } else if !on && touchBar.running {
             touchBar.stop()
+        }
+        // tell the phone why nothing arrives instead of leaving it "waiting"
+        let err: String? = !on ? nil : !TouchBarEmulator.available ? "Touch Bar API is not available on this macOS"
+            : touchBar.running ? nil : touchBar.lastError
+        if err != sentTouchBarError {
+            sentTouchBarError = err
+            conn.send(["type": "touchbar.status", "error": err ?? ""])
         }
     }
 
@@ -122,6 +131,7 @@ final class Hub {
             }
             if let t = o["touchbar"] as? Bool {
                 wantTouchBar = t
+                sentTouchBarError = nil
                 updateTouchBar()
                 if t { touchBar.resend() }
             }

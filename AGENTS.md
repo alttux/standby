@@ -69,6 +69,8 @@ open "build/StandBy Companion.app" --args --settings --logs --snapshot <dir>   #
 - Touch Bar (`TouchBar.swift`) — приватные DFRFoundation и SkyLight через `dlsym`, плюс `CGDisplayStreamStart/Stop`
   через `dlsym` (в SDK macOS 15 они недоступны). Всегда возвращайте `DFRSetStatus` к исходному значению.
   Нажатия работают только с «Универсальным доступом», а у ad-hoc-сборки он сбрасывается после каждой пересборки.
+  Не убивайте компаньон через `kill -9` во время трансляции: ControlStrip зависнет, и поток будет
+  возвращать `1000`, пока его не перезапустить (`killall ControlStrip`; компаньон делает это сам).
   Исследование — в `docs/touchbar/RESEARCH.md`, проверочная утилита — `docs/touchbar/probe/main.swift`.
 - Подписки в `subscribe` независимы (`viz`, `touchbar`): меняйте только ключи, которые пришли в сообщении.
 

@@ -62,10 +62,14 @@ final class TouchBarEmulator {
     private var lastPNG = Data()
     private let minInterval: TimeInterval = 1.0 / 15
     private var warnedAX = false
+    private var nextAttempt = Date.distantPast
+    private var lastRepair = Date.distantPast
+    /// Why the stream is not running (shown on the phone), nil when fine.
+    private(set) var lastError: String?
     var running: Bool { stream != nil }
 
     func start() {
-        guard stream == nil, let api = Self.api else { return }
+        guard stream == nil, let api = Self.api, Date() >= nextAttempt else { return }
         initialStatus = api.getStatus()
         if initialStatus & 0x01 == 0 { api.setStatus(2) }
         guard let s = api.create(0, queue, { [weak self] status, _, surface, _ in
@@ -78,14 +82,37 @@ final class TouchBarEmulator {
         }
         let r = api.start(s)
         guard r == 0 else {
-            Log.w("Touch Bar: stream start failed (\(r))")
             api.setStatus(initialStatus)
+            failed(code: r)
             return
         }
         stream = s
+        lastError = nil
+        nextAttempt = .distantPast
         lastPNG = Data()
         let size = api.getSize()
         Log.i("Touch Bar emulator started (\(Int(size.width))×\(Int(size.height)) pt)")
+    }
+
+    /// `CGDisplayStreamStart` returns 1000 when ControlStrip (the process that renders the Touch Bar) got stuck,
+    /// typically after a client that enabled the virtual Touch Bar was killed. Restarting it (launchd relaunches it)
+    /// fixes that; it is done at most once a minute, other failures back off for 30 s.
+    private func failed(code: Int32) {
+        if Date().timeIntervalSince(lastRepair) > 60 {
+            lastRepair = Date()
+            Log.w("Touch Bar: stream start failed (\(code)), restarting ControlStrip")
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+            p.arguments = ["ControlStrip"]
+            try? p.run()
+            p.waitUntilExit()
+            lastError = "restarting ControlStrip"
+            nextAttempt = Date().addingTimeInterval(3)
+        } else {
+            Log.w("Touch Bar: stream start failed (\(code)); retrying in 30 s")
+            lastError = "macOS refused the Touch Bar stream (error \(code))"
+            nextAttempt = Date().addingTimeInterval(30)
+        }
     }
 
     func stop() {

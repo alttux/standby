@@ -89,20 +89,24 @@ class TouchBarCard(ctx: Context) : Card(ctx) {
             tp.textSize = h * 0.065f
             tp.color = pal.text
             c.drawText("Touch Bar", pad, pad + capHeight(tp), tp)
-            if (f != null && f.app.isNotEmpty()) {
-                val tw = tp.measureText("Touch Bar")
-                tp.typeface = Fonts.medium
-                tp.textSize = h * 0.05f
-                tp.color = pal.text2
-                c.drawText(ellipsize("· " + f.app, tp, w * 0.45f), pad + tw + h * 0.025f, pad + h * 0.065f * 0.727f, tp)
-            }
+            val titleW = tp.measureText("Touch Bar")
+            var hintW = 0f
             if (f != null && !f.input) {
                 tp.textAlign = Paint.Align.RIGHT
                 tp.typeface = Fonts.medium
                 tp.textSize = h * 0.04f
                 tp.color = pal.orange
-                c.drawText(ellipsize(L("Taps need Accessibility on the Mac", "Для нажатий нужен «Универсальный доступ»"),
-                    tp, w * 0.5f), w - pad, pad + capHeight(tp) * 1.2f, tp)
+                val hint = ellipsize(L("Taps need Accessibility on the Mac", "Для нажатий нужен «Универсальный доступ»"), tp, w * 0.5f)
+                hintW = tp.measureText(hint) + h * 0.04f
+                c.drawText(hint, w - pad, pad + capHeight(tp) * 1.2f, tp)
+            }
+            if (f != null && f.app.isNotEmpty()) {
+                tp.textAlign = Paint.Align.LEFT
+                tp.typeface = Fonts.medium
+                tp.textSize = h * 0.05f
+                tp.color = pal.text2
+                val x = pad + titleW + h * 0.025f
+                c.drawText(ellipsize("· " + f.app, tp, w - pad - hintW - x), x, pad + h * 0.065f * 0.727f, tp)
             }
 
             if (f == null) {
@@ -134,13 +138,19 @@ class TouchBarCard(ctx: Context) : Card(ctx) {
             tp.typeface = Fonts.semibold
             tp.textSize = h * 0.06f
             tp.color = pal.text
-            val title = if (!Mac.connected) L("Mac not connected", "Mac не подключён") else L("Waiting for the Touch Bar…", "Ожидание Touch Bar…")
+            val err = Mac.touchBarError
+            val title = when {
+                !Mac.connected -> L("Mac not connected", "Mac не подключён")
+                err.isNotEmpty() -> L("Touch Bar unavailable", "Touch Bar недоступен")
+                else -> L("Waiting for the Touch Bar…", "Ожидание Touch Bar…")
+            }
             c.drawText(title, w / 2, strip.bottom + h * 0.14f, tp)
             tp.typeface = Fonts.regular
             tp.textSize = h * 0.042f
             tp.color = pal.text2
-            c.drawText(L("The companion turns on the Mac's built-in Touch Bar emulation and streams it here",
-                "Компаньон включает встроенную в macOS эмуляцию Touch Bar и передаёт её сюда"), w / 2, strip.bottom + h * 0.22f, tp)
+            val sub = if (Mac.connected && err.isNotEmpty()) "Mac: $err" else L("The companion turns on the Mac's built-in Touch Bar emulation and streams it here",
+                "Компаньон включает встроенную в macOS эмуляцию Touch Bar и передаёт её сюда")
+            c.drawText(ellipsize(sub, tp, w * 0.9f), w / 2, strip.bottom + h * 0.22f, tp)
             Icons.draw(c, R.drawable.ic_laptop, w / 2, strip.top - h * 0.12f, h * 0.12f, pal.text3)
         }
 

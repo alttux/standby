@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private(set) lazy var hub = Hub(conn: conn)
     private var bag = Set<AnyCancellable>()
     private var windows: [String: NSWindow] = [:]
+    private var signalSources: [DispatchSourceSignal] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -19,6 +20,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         updateIcon()
         hub.start()
         conn.start()
+        // `kill`/Ctrl-C skip applicationWillTerminate; a Touch Bar left enabled by a dead process
+        // leaves ControlStrip stuck, so restore it on these signals too
+        for sig in [SIGTERM, SIGINT, SIGHUP] {
+            signal(sig, SIG_IGN)
+            let src = DispatchSource.makeSignalSource(signal: sig, queue: .main)
+            src.setEventHandler { [weak self] in
+                self?.hub.shutdown()
+                exit(0)
+            }
+            src.resume()
+            signalSources.append(src)
+        }
         Log.i("StandBy Companion started; adb: \(ADB.path ?? "not found")")
         // `open -a "StandBy Companion" --args --settings` (or --logs) opens a window right away; handy for testing
         let args = CommandLine.arguments

@@ -36,6 +36,12 @@ DFRFoundationPostEventWithMouseActivity ◀── touchbar.touch ── каса
 | `NSEvent` мыши из окна | касания с телефона → `leftMouseDown/Dragged/Up` |
 | запрос Accessibility при старте | запрос при первом касании; в кадре флаг `input`, телефон показывает подсказку |
 
+**Устойчивость.** Если `CGDisplayStreamStart` возвращает ошибку (обычно `1000` из-за зависшего ControlStrip,
+см. RESEARCH.md, п. 4), компаньон сам перезапускает ControlStrip (не чаще раза в минуту) и через 3 с пробует снова;
+другие ошибки повторяются раз в 30 с, а не каждую секунду. Статус Touch Bar восстанавливается и при SIGTERM, SIGINT
+и SIGHUP: `kill` и Ctrl-C не вызывают `applicationWillTerminate`. Если поток не работает, телефон получает
+`touchbar.status` с причиной и показывает её вместо «Ожидания».
+
 Поток работает только пока карточка Touch Bar открыта на телефоне (подписка `subscribe {touchbar}`)
 и включена настройка «Touch Bar emulator». При выходе из компаньона статус Touch Bar восстанавливается
 (`applicationWillTerminate`). Вместе с кадром передаётся название активного приложения.
@@ -49,6 +55,7 @@ DFRFoundationPostEventWithMouseActivity ◀── touchbar.touch ── каса
 |---|---|---|
 | телефон → Mac | `subscribe` | `touchbar: true/false` (ключи подписки теперь независимы: `viz` и `touchbar`) |
 | Mac → телефон | `touchbar` | `data` (PNG, base64), `w`, `h` (px), `pw`, `ph` (pt), `app`, `input` (есть ли Accessibility) |
+| Mac → телефон | `touchbar.status` | `error` — почему кадров нет (пусто, если всё в порядке) |
 | телефон → Mac | `touchbar.touch` | `phase`: `down`/`move`/`up`, `x`, `y` — точки Touch Bar, начало слева внизу |
 
 ## Лаунчер: `android/app/src/main/java/dev/standby/cards/TouchBarCard.kt`
@@ -101,6 +108,7 @@ DFRFoundationPostEventWithMouseActivity ◀── touchbar.touch ── каса
 | Music | ✓ `esc` / ⏪ ▶ ⏩ одной группой / Control Strip с «Сейчас играет» |
 | Firefox | ✓ навигация / адресная строка и «+» / «Поделиться» и Control Strip |
 | Смена активного приложения на Mac | ✓ раскладка перестраивается сама (Finder → Music → Firefox) |
+| Зависший ControlStrip (`kill -9` компаньона, затем запуск) | ✓ компаньон перезапустил ControlStrip, Touch Bar пошёл через 3 с |
 | Касания доходят до компаньона | ✓ (`touchbar.touch` в логе) |
 | Касания срабатывают в macOS | ⏳ нужно включить StandBy Companion в «Универсальном доступе» на Mac |
 
